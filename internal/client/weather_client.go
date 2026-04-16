@@ -30,7 +30,10 @@ type weatherResponse struct {
 }
 
 func (c *WeatherClient) GetCurrentWeather(ctx context.Context, lat, lon float64) (*weatherResponse, error) {
-	u, _ := url.Parse(c.baseURL)
+	u, err := url.Parse(c.baseURL)
+	if err != nil {
+		return nil, err
+	}
 
 	q := u.Query()
 	q.Set("latitude", fmt.Sprintf("%.4f", lat))
@@ -38,7 +41,10 @@ func (c *WeatherClient) GetCurrentWeather(ctx context.Context, lat, lon float64)
 	q.Set("current_weather", "true")
 	u.RawQuery = q.Encode()
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

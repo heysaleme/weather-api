@@ -28,14 +28,20 @@ type geoResponse struct {
 }
 
 func (c *GeoClient) GetCoordinates(ctx context.Context, city string) (float64, float64, error) {
-	u, _ := url.Parse(c.baseURL)
+	u, err := url.Parse(c.baseURL)
+	if err != nil {
+		return 0, 0, err
+	}
 
 	q := u.Query()
 	q.Set("name", city)
 	q.Set("count", "1")
 	u.RawQuery = q.Encode()
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return 0, 0, err
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
