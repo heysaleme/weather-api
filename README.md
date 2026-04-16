@@ -31,7 +31,7 @@ http://localhost:8080
 
 ### Get Weather by City
 
-```HTTP
+```http
 GET /weather/{city}
 ```
 
@@ -48,6 +48,11 @@ Example:
 curl http://localhost:8080/weather/Almaty
 ```
 
+### Pretty output (optional)
+
+```bash
+curl http://localhost:8080/weather/Almaty | jq
+```
 
 Response:
 ```json
@@ -68,7 +73,7 @@ Response:
 
 ### Get Weather by Country
 
-```HTTP
+```http
 GET /weather/country/{country}
 ```
 
@@ -89,7 +94,7 @@ curl http://localhost:8080/weather/country/Kazakhstan
 
 ### Get Top 3 Warmest Cities
 
-```HTTP
+```http
 GET /weather/country/{country}/top
 ```
 
@@ -116,15 +121,6 @@ Temperature-based logic:
 - \> 15°C     → Лёгкая одежда
 
 ---
-
-### Pretty output (optional)
-
-```bash
-curl http://localhost:8080/weather/Almaty | jq
-```
-
----
-
 
 ## Architecture
 
