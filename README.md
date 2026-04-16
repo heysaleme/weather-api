@@ -121,8 +121,10 @@ Temperature-based logic:
 
 ```bash
 curl http://localhost:8080/weather/Almaty | jq
+```
 
 ---
+
 
 ## Architecture
 
