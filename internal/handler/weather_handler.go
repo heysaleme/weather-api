@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"weather-api/internal/service"
 
@@ -26,7 +27,14 @@ func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request
 
 	result, err := h.service.GetWeatherByCity(r.Context(), city)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "invalid") ||
+			strings.Contains(err.Error(), "not supported") {
+			status = http.StatusBadRequest
+		}
+
+		writeError(w, status, err.Error())
 		return
 	}
 
@@ -38,7 +46,14 @@ func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Requ
 
 	result, err := h.service.GetWeatherByCountry(r.Context(), country)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "invalid") ||
+			strings.Contains(err.Error(), "not supported") {
+			status = http.StatusBadRequest
+		}
+
+		writeError(w, status, err.Error())
 		return
 	}
 
@@ -50,7 +65,14 @@ func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Re
 
 	result, err := h.service.GetTopCitiesByCountry(r.Context(), country)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "invalid") ||
+			strings.Contains(err.Error(), "not supported") {
+			status = http.StatusBadRequest
+		}
+
+		writeError(w, status, err.Error())
 		return
 	}
 
