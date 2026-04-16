@@ -1,26 +1,19 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
-	"weather-api/internal/model"
+	"weather-api/internal/service"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type WeatherService interface {
-	GetWeatherByCity(ctx context.Context, city string) (*model.WeatherResult, error)
-	GetWeatherByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error)
-	GetTopCitiesByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error)
-}
-
 type WeatherHandler struct {
-	service WeatherService
+	service *service.WeatherService
 }
 
-func NewWeatherHandler(s WeatherService) *WeatherHandler {
+func NewWeatherHandler(s *service.WeatherService) *WeatherHandler {
 	return &WeatherHandler{service: s}
 }
 
@@ -33,7 +26,7 @@ func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request
 
 	result, err := h.service.GetWeatherByCity(r.Context(), city)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -45,7 +38,7 @@ func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Requ
 
 	result, err := h.service.GetWeatherByCountry(r.Context(), country)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -57,7 +50,7 @@ func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Re
 
 	result, err := h.service.GetTopCitiesByCountry(r.Context(), country)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
