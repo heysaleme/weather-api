@@ -16,8 +16,10 @@ The project follows a layered architecture:
 
 ### Run locally
 
+```bash
 go mod tidy
 go run cmd/main.go
+```
 
 Server will start on:
 
@@ -29,20 +31,26 @@ http://localhost:8080
 
 ### Get Weather by City
 
+```HTTP
 GET /weather/{city}
+```
 
 Description:
 Returns current weather data for the specified city.
 
 Flow:
-1. Resolve city name to coordinates
-2. Fetch weather data using coordinates
-3. Add description and clothing recommendation
+1. Resolve city to coordinates
+2. Fetch weather data
+3. Enrich response (description, clothing)
 
 Example:
+```bash
 curl http://localhost:8080/weather/Almaty
+```
+
 
 Response:
+```json
 {
   "city": "Almaty",
   "latitude": 43.25,
@@ -54,12 +62,15 @@ Response:
   "description": "Переменная облачность",
   "clothing": "Лёгкая одежда"
 }
+```
 
 ---
 
 ### Get Weather by Country
 
+```HTTP
 GET /weather/country/{country}
+```
 
 Description:
 Returns weather data for a predefined list of cities within a country.
@@ -70,13 +81,17 @@ Behavior:
 - Returns an array of results
 
 Example:
+```bash
 curl http://localhost:8080/weather/country/Kazakhstan
+```
 
 ---
 
 ### Get Top 3 Warmest Cities
 
+```HTTP
 GET /weather/country/{country}/top
+```
 
 Description:
 Returns top 3 cities with the highest temperature.
@@ -87,8 +102,9 @@ Behavior:
 - Returns up to 3 cities
 
 Example:
+```bash
 curl http://localhost:8080/weather/country/Kazakhstan/top
-
+```
 ---
 
 ## Clothing Recommendation
@@ -103,7 +119,9 @@ Temperature-based logic:
 
 ## Architecture
 
+```code
 Handler → Service → Client → External API
+```
 
 Handler (internal/handler):
 - Parses HTTP requests
@@ -127,6 +145,7 @@ Model (internal/model):
 
 ## Project Structure
 
+```bash
 weather-api/
 ├── cmd/main.go
 ├── internal/
@@ -134,6 +153,7 @@ weather-api/
 │   ├── service/
 │   ├── client/
 │   └── model/
+```
 
 ---
 
@@ -141,9 +161,11 @@ weather-api/
 
 The API returns errors in JSON format:
 
+```json
 {
   "error": "city not found"
 }
+```
 
 ---
 
@@ -152,3 +174,7 @@ The API returns errors in JSON format:
 - Go (net/http)
 - Chi router
 - Open-Meteo API
+
+## Requirements
+
+- Go 1.20+
