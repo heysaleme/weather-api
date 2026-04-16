@@ -2,10 +2,16 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"weather-api/internal/client"
 	"weather-api/internal/model"
+)
+
+const (
+	coldThreshold = 5
+	warmThreshold = 15
 )
 
 type WeatherService struct {
@@ -45,24 +51,29 @@ func (s *WeatherService) GetWeatherByCity(ctx context.Context, city string) (*mo
 }
 
 func (s *WeatherService) GetWeatherByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error) {
-	cities := map[string][]string{
-		"Kazakhstan": {"Astana", "Almaty", "Shymkent"},
+	cities, ok := countryCities[country]
+	if !ok {
+		return nil, fmt.Errorf("country not supported")
 	}
 
 	var results []*model.WeatherResult
 
-	for _, city := range cities[country] {
+	for _, city := range cities {
 		w, err := s.GetWeatherByCity(ctx, city)
-		if err == nil {
-			results = append(results, w)
+		if err != nil {
+			continue
 		}
+		results = append(results, w)
 	}
 
 	return results, nil
 }
 
 func (s *WeatherService) GetTopCitiesByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error) {
-	cities, _ := s.GetWeatherByCountry(ctx, country)
+	cities, err := s.GetWeatherByCountry(ctx, country)
+	if err != nil {
+		return nil, err
+	}
 
 	sort.Slice(cities, func(i, j int) bool {
 		return cities[i].Temperature > cities[j].Temperature
@@ -87,10 +98,10 @@ func mapWeatherCode(code int) string {
 }
 
 func getClothing(temp float64) string {
-	if temp < 5 {
+	if temp < coldThreshold {
 		return "Тёплая одежда"
 	}
-	if temp < 15 {
+	if temp < warmThreshold {
 		return "Куртка"
 	}
 	return "Лёгкая одежда"
