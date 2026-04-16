@@ -48,7 +48,7 @@ Example:
 curl http://localhost:8080/weather/Almaty
 ```
 
-### Pretty output (optional)
+### Use jq to format JSON output:
 
 ```bash
 curl http://localhost:8080/weather/Almaty | jq
