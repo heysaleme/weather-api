@@ -1,19 +1,26 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	"weather-api/internal/service"
+	"weather-api/internal/model"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type WeatherHandler struct {
-	service *service.WeatherService
+type WeatherService interface {
+	GetWeatherByCity(ctx context.Context, city string) (*model.WeatherResult, error)
+	GetWeatherByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error)
+	GetTopCitiesByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error)
 }
 
-func NewWeatherHandler(s *service.WeatherService) *WeatherHandler {
+type WeatherHandler struct {
+	service WeatherService
+}
+
+func NewWeatherHandler(s WeatherService) *WeatherHandler {
 	return &WeatherHandler{service: s}
 }
 
