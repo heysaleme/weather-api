@@ -117,6 +117,13 @@ Temperature-based logic:
 
 ---
 
+### Pretty output (optional)
+
+```bash
+curl http://localhost:8080/weather/Almaty | jq
+
+---
+
 ## Architecture
 
 ```code
