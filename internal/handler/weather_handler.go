@@ -26,24 +26,39 @@ func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, result)
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Request) {
 	country := chi.URLParam(r, "country")
 
-	result, _ := h.service.GetWeatherByCountry(r.Context(), country)
-	writeJSON(w, result)
+	result, err := h.service.GetWeatherByCountry(r.Context(), country)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Request) {
 	country := chi.URLParam(r, "country")
 
-	result, _ := h.service.GetTopCitiesByCountry(r.Context(), country)
-	writeJSON(w, result)
+	result, err := h.service.GetTopCitiesByCountry(r.Context(), country)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
-func writeJSON(w http.ResponseWriter, data any) {
+func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	w.WriteHeader(status)
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+
+	if err := encoder.Encode(data); err != nil {
+		http.Error(w, `{"error":"failed to encode json"}`, http.StatusInternalServerError)
+	}
 }
