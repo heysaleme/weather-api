@@ -78,11 +78,12 @@ GET /weather/country/{country}
 ```
 
 Description:
-Returns weather data for a predefined list of cities within a country.
+Returns weather data for cities within a country.
 
 Behavior:
-- Uses internal mapping of country → cities
-- Fetches weather for each city
+- Resolves the country via public API
+- Loads city names via public API
+- Fetches weather for available cities
 - Returns an array of results
 
 Example:
@@ -158,6 +159,7 @@ weather-api/
 │   ├── service/
 │   ├── client/
 │   └── model/
+│   └── errs/
 ```
 
 ---
@@ -179,6 +181,8 @@ The API returns errors in JSON format:
 - Go (net/http)
 - Chi router
 - Open-Meteo API
+- REST Countries API
+- CountriesNow API
 
 ## Requirements
 
