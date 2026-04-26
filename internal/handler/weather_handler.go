@@ -1,20 +1,28 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
-	"strings"
 
-	"weather-api/internal/service"
+	"weather-api/internal/errs"
+	"weather-api/internal/model"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type WeatherHandler struct {
-	service *service.WeatherService
+type WeatherService interface {
+	GetWeatherByCity(ctx context.Context, city string) (*model.WeatherResult, error)
+	GetWeatherByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error)
+	GetTopCitiesByCountry(ctx context.Context, country string) ([]*model.WeatherResult, error)
 }
 
-func NewWeatherHandler(s *service.WeatherService) *WeatherHandler {
+type WeatherHandler struct {
+	service WeatherService
+}
+
+func NewWeatherHandler(s WeatherService) *WeatherHandler {
 	return &WeatherHandler{service: s}
 }
 
@@ -27,14 +35,7 @@ func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request
 
 	result, err := h.service.GetWeatherByCity(r.Context(), city)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if strings.Contains(err.Error(), "not found") ||
-			strings.Contains(err.Error(), "invalid") ||
-			strings.Contains(err.Error(), "not supported") {
-			status = http.StatusBadRequest
-		}
-
-		writeError(w, status, err.Error())
+		writeError(w, statusCode(err), err.Error())
 		return
 	}
 
@@ -46,14 +47,7 @@ func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Requ
 
 	result, err := h.service.GetWeatherByCountry(r.Context(), country)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if strings.Contains(err.Error(), "not found") ||
-			strings.Contains(err.Error(), "invalid") ||
-			strings.Contains(err.Error(), "not supported") {
-			status = http.StatusBadRequest
-		}
-
-		writeError(w, status, err.Error())
+		writeError(w, statusCode(err), err.Error())
 		return
 	}
 
@@ -65,14 +59,7 @@ func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Re
 
 	result, err := h.service.GetTopCitiesByCountry(r.Context(), country)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if strings.Contains(err.Error(), "not found") ||
-			strings.Contains(err.Error(), "invalid") ||
-			strings.Contains(err.Error(), "not supported") {
-			status = http.StatusBadRequest
-		}
-
-		writeError(w, status, err.Error())
+		writeError(w, statusCode(err), err.Error())
 		return
 	}
 
@@ -93,4 +80,17 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, ErrorResponse{Error: message})
+}
+
+func statusCode(err error) int {
+	switch {
+	case errors.Is(err, errs.ErrInvalidInput):
+		return http.StatusBadRequest
+	case errors.Is(err, errs.ErrNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, errs.ErrUpstream):
+		return http.StatusBadGateway
+	default:
+		return http.StatusInternalServerError
+	}
 }

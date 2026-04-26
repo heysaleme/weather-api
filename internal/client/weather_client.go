@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"weather-api/internal/errs"
 )
 
 type WeatherClient struct {
@@ -48,13 +50,17 @@ func (c *WeatherClient) GetCurrentWeather(ctx context.Context, lat, lon float64)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errs.Upstream("weather request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, errs.Upstream("weather status %d", resp.StatusCode)
+	}
+
 	var result weatherResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return nil, errs.Upstream("decode weather response: %v", err)
 	}
 
 	return &result, nil

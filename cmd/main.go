@@ -21,8 +21,9 @@ func main() {
 
 	weatherClient := client.NewWeatherClient(httpClient)
 	geoClient := client.NewGeoClient(httpClient)
+	countryClient := client.NewCountryClient(httpClient)
 
-	weatherService := service.NewWeatherService(weatherClient, geoClient)
+	weatherService := service.NewWeatherService(weatherClient, geoClient, countryClient)
 	weatherHandler := handler.NewWeatherHandler(weatherService)
 
 	router.Route("/weather", func(r chi.Router) {
