@@ -2,11 +2,8 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"net/http"
 
-	"weather-api/internal/errs"
 	"weather-api/internal/model"
 
 	"github.com/go-chi/chi/v5"
@@ -24,10 +21,6 @@ type WeatherHandler struct {
 
 func NewWeatherHandler(s WeatherService) *WeatherHandler {
 	return &WeatherHandler{service: s}
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
 }
 
 func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request) {
@@ -64,33 +57,4 @@ func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Re
 	}
 
 	writeJSON(w, http.StatusOK, result)
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	encoder := json.NewEncoder(w)
-	encoder.SetIndent("", "  ")
-
-	if err := encoder.Encode(data); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to encode json")
-	}
-}
-
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, ErrorResponse{Error: message})
-}
-
-func statusCode(err error) int {
-	switch {
-	case errors.Is(err, errs.ErrInvalidInput):
-		return http.StatusBadRequest
-	case errors.Is(err, errs.ErrNotFound):
-		return http.StatusNotFound
-	case errors.Is(err, errs.ErrUpstream):
-		return http.StatusBadGateway
-	default:
-		return http.StatusInternalServerError
-	}
 }
