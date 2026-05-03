@@ -2,188 +2,149 @@
 
 ## Overview
 
-Weather API is a REST service written in Go that provides current weather data by city and country.
-The service integrates with external APIs to fetch real-time data and returns structured JSON responses.
+REST API на Go для работы с погодой и пользовательскими данными.
 
-The project follows a layered architecture:
-- Handler — HTTP layer
-- Service — business logic
-- Client — external API interaction
+Теперь сервис поддерживает:
+- JWT аутентификацию
+- роли `user` и `admin`
+- защищённые маршруты
+- хранение пользовательских городов
+- историю погодных запросов
 
----
+Архитектура:
 
-## Getting Started
+```text
+Request -> AuthMiddleware -> Handler -> Service -> Repository
+```
 
-### Run locally
+## Run locally
+
+Перед запуском задайте обязательные переменные окружения:
+
+```bash
+export JWT_SECRET="super-secret-key"
+export ADMIN_EMAILS="admin@example.com"
+```
+
+`ADMIN_EMAILS` необязательна. Если email пользователя есть в этом списке, при регистрации он получает роль `admin`.
+
+Запуск:
 
 ```bash
 go mod tidy
 go run cmd/main.go
 ```
 
-Server will start on:
+Сервер стартует на `http://localhost:8080`.
 
-http://localhost:8080
+## Security
 
----
+- пароли хэшируются через `bcrypt`
+- JWT secret хранится в env
+- токен подписывается `HS256`
+- в JWT есть `user_id`, `email`, `role`, `exp`
+- middleware валидирует подпись и `exp`
+- пароли не возвращаются в API и не хранятся в plain text
 
-## API Endpoints
+## Auth endpoints
 
-### Get Weather by City
+### `POST /auth/register`
 
-```http
-GET /weather/{city}
+Регистрация пользователя.
+
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "strongpass123"
+}
 ```
 
-Description:
-Returns current weather data for the specified city.
+### `POST /auth/login`
 
-Flow:
-1. Resolve city to coordinates
-2. Fetch weather data
-3. Enrich response (description, clothing)
+Возвращает JWT access token.
 
-Example:
-```bash
-curl http://localhost:8080/weather/Almaty
-```
+Request:
 
-### Use jq to format JSON output:
-
-```bash
-curl http://localhost:8080/weather/Almaty | jq
+```json
+{
+  "email": "user@example.com",
+  "password": "strongpass123"
+}
 ```
 
 Response:
+
 ```json
 {
-  "city": "Almaty",
-  "latitude": 43.25,
-  "longitude": 76.95,
-  "temperature": 25.4,
-  "wind_speed": 3.2,
-  "weather_code": 1,
-  "time": "2026-04-16T12:00",
-  "description": "Переменная облачность",
-  "clothing": "Лёгкая одежда"
+  "access_token": "..."
 }
 ```
 
----
+## Protected endpoints
 
-### Get Weather by Country
-
-```http
-GET /weather/country/{country}
-```
-
-Description:
-Returns weather data for cities within a country.
-
-Behavior:
-- Resolves the country via public API
-- Loads city names via public API
-- Fetches weather for available cities
-- Returns an array of results
-
-Example:
-```bash
-curl http://localhost:8080/weather/country/Kazakhstan
-```
-
----
-
-### Get Top 3 Warmest Cities
-
-```http
-GET /weather/country/{country}/top
-```
-
-Description:
-Returns top 3 cities with the highest temperature.
-
-Behavior:
-- Retrieves all cities for the country
-- Sorts them by temperature (descending)
-- Returns up to 3 cities
-
-Example:
-```bash
-curl http://localhost:8080/weather/country/Kazakhstan/top
-```
----
-
-## Clothing Recommendation
-
-Temperature-based logic:
-
-- < 5°C      → Тёплая одежда
-- 5–15°C     → Куртка
-- \> 15°C     → Лёгкая одежда
-
----
-
-## Architecture
-
-```code
-Handler → Service → Client → External API
-```
-
-Handler (internal/handler):
-- Parses HTTP requests
-- Validates input
-- Returns JSON responses
-
-Service (internal/service):
-- Contains business logic
-- Aggregates and transforms data
-- Adds derived fields (description, clothing)
-- Handles sorting (top cities)
-
-Client (internal/client):
-- Performs HTTP requests to external APIs
-- Parses responses
-
-Model (internal/model):
-- Defines response structures
-
----
-
-## Project Structure
+Для всех защищённых маршрутов нужен заголовок:
 
 ```bash
+Authorization: Bearer <token>
+```
+
+### Cities
+
+- `POST /cities`
+- `GET /cities`
+- `DELETE /cities/{city_id}`
+
+Пример добавления города:
+
+```json
+{
+  "city": "Almaty"
+}
+```
+
+### Weather
+
+- `GET /weather`
+- `GET /weather/history`
+
+`GET /weather` получает текущую погоду по всем городам текущего пользователя и сохраняет результат в историю.
+
+### Current user
+
+- `GET /users/me`
+
+Возвращает данные текущего пользователя из JWT.
+
+## Admin endpoints
+
+Только для роли `admin`:
+
+- `GET /users`
+- `GET /users/{id}`
+- `DELETE /users/{id}`
+
+## Legacy public weather endpoints
+
+Сохранены существующие публичные маршруты:
+
+- `GET /weather/{city}`
+- `GET /weather/country/{country}`
+- `GET /weather/country/{country}/top`
+
+## Project structure
+
+```text
 weather-api/
 ├── cmd/main.go
-├── internal/
-│   ├── handler/
-│   ├── service/
-│   ├── client/
-│   └── model/
-│   └── errs/
+└── internal/
+    ├── auth/
+    ├── client/
+    ├── errs/
+    ├── handler/
+    ├── middleware/
+    ├── model/
+    ├── repository/
+    └── service/
 ```
-
----
-
-## Error Handling
-
-The API returns errors in JSON format:
-
-```json
-{
-  "error": "city not found"
-}
-```
-
----
-
-## Technologies
-
-- Go (net/http)
-- Chi router
-- Open-Meteo API
-- REST Countries API
-- CountriesNow API
-
-## Requirements
-
-- Go 1.20+
