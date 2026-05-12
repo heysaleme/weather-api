@@ -3,24 +3,22 @@ package service
 import (
 	"context"
 	"sort"
-	"strconv"
 	"strings"
 
 	"weather-api/internal/errs"
 	"weather-api/internal/model"
-	"weather-api/internal/repository"
 )
 
 type CityService struct {
-	cities repository.CityRepository
+	cities CityStore
 }
 
-func NewCityService(cities repository.CityRepository) *CityService {
+func NewCityService(cities CityStore) *CityService {
 	return &CityService{cities: cities}
 }
 
-func (s *CityService) Create(ctx context.Context, user *model.AuthUser, req model.CreateCityRequest) (*model.City, error) {
-	name := strings.TrimSpace(req.City)
+func (s *CityService) Create(ctx context.Context, user *model.AuthUser, cityName string) (*model.City, error) {
+	name := strings.TrimSpace(cityName)
 	if name == "" {
 		return nil, errs.InvalidInput("city is required")
 	}
@@ -51,13 +49,12 @@ func (s *CityService) List(ctx context.Context, user *model.AuthUser) ([]*model.
 	return cities, nil
 }
 
-func (s *CityService) Delete(ctx context.Context, user *model.AuthUser, cityID string) error {
-	id, err := strconv.ParseInt(cityID, 10, 64)
-	if err != nil || id <= 0 {
+func (s *CityService) Delete(ctx context.Context, user *model.AuthUser, cityID int64) error {
+	if cityID <= 0 {
 		return errs.InvalidInput("invalid city id")
 	}
 
-	city, err := s.cities.GetByID(ctx, id)
+	city, err := s.cities.GetByID(ctx, cityID)
 	if err != nil {
 		return err
 	}
@@ -65,5 +62,5 @@ func (s *CityService) Delete(ctx context.Context, user *model.AuthUser, cityID s
 		return errs.NotFound("city not found")
 	}
 
-	return s.cities.Delete(ctx, id)
+	return s.cities.Delete(ctx, cityID)
 }

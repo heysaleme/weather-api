@@ -6,19 +6,18 @@ import (
 
 	"weather-api/internal/errs"
 	"weather-api/internal/model"
-	"weather-api/internal/repository"
 )
 
 type UserService struct {
-	users   repository.UserRepository
-	cities  repository.CityRepository
-	history repository.WeatherHistoryRepository
+	users   UserStore
+	cities  CityStore
+	history WeatherHistoryStore
 }
 
 func NewUserService(
-	users repository.UserRepository,
-	cities repository.CityRepository,
-	history repository.WeatherHistoryRepository,
+	users UserStore,
+	cities CityStore,
+	history WeatherHistoryStore,
 ) *UserService {
 	return &UserService{
 		users:   users,
