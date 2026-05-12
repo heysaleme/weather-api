@@ -6,39 +6,27 @@ import (
 	"strings"
 	"time"
 
-	"weather-api/internal/auth"
 	"weather-api/internal/errs"
 	"weather-api/internal/model"
-	"weather-api/internal/repository"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	users       repository.UserRepository
-	jwtManager  *auth.JWTManager
-	adminEmails map[string]struct{}
+	users      UserStore
+	jwtManager TokenManager
 }
 
-func NewAuthService(users repository.UserRepository, jwtManager *auth.JWTManager, adminEmails []string) *AuthService {
-	adminSet := make(map[string]struct{}, len(adminEmails))
-	for _, email := range adminEmails {
-		key := strings.ToLower(strings.TrimSpace(email))
-		if key != "" {
-			adminSet[key] = struct{}{}
-		}
-	}
-
+func NewAuthService(users UserStore, jwtManager TokenManager) *AuthService {
 	return &AuthService{
-		users:       users,
-		jwtManager:  jwtManager,
-		adminEmails: adminSet,
+		users:      users,
+		jwtManager: jwtManager,
 	}
 }
 
-func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (*model.User, error) {
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-	password := strings.TrimSpace(req.Password)
+func (s *AuthService) Register(ctx context.Context, email, password string) (*model.User, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	password = strings.TrimSpace(password)
 
 	if _, err := mail.ParseAddress(email); err != nil {
 		return nil, errs.InvalidInput("valid email is required")
@@ -60,14 +48,9 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (
 		return nil, err
 	}
 
-	role := model.RoleUser
-	if _, ok := s.adminEmails[email]; ok {
-		role = model.RoleAdmin
-	}
-
 	user := &model.User{
 		Email:        email,
-		Role:         role,
+		Role:         model.RoleUser,
 		PasswordHash: string(hash),
 		CreatedAt:    time.Now().UTC(),
 	}
@@ -79,32 +62,32 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (
 	return sanitizeUser(user), nil
 }
 
-func (s *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model.AuthResponse, error) {
-	email := strings.ToLower(strings.TrimSpace(req.Email))
-	password := strings.TrimSpace(req.Password)
+func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	password = strings.TrimSpace(password)
 
 	if email == "" || password == "" {
-		return nil, errs.InvalidInput("email and password are required")
+		return "", errs.InvalidInput("email and password are required")
 	}
 
 	user, err := s.users.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if user == nil {
-		return nil, errs.Unauthorized("invalid credentials")
+		return "", errs.Unauthorized("invalid credentials")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, errs.Unauthorized("invalid credentials")
+		return "", errs.Unauthorized("invalid credentials")
 	}
 
 	token, err := s.jwtManager.Generate(user)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &model.AuthResponse{AccessToken: token}, nil
+	return token, nil
 }
 
 func sanitizeUser(user *model.User) *model.User {

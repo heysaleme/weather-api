@@ -10,16 +10,24 @@ import (
 	"weather-api/internal/model"
 )
 
+type UserReader interface {
+	GetByID(ctx context.Context, id int64) (*model.User, error)
+}
+
 type contextKey string
 
 const userContextKey contextKey = "auth_user"
 
 type AuthMiddleware struct {
 	jwtManager *auth.JWTManager
+	users      UserReader
 }
 
-func NewAuthMiddleware(jwtManager *auth.JWTManager) *AuthMiddleware {
-	return &AuthMiddleware{jwtManager: jwtManager}
+func NewAuthMiddleware(jwtManager *auth.JWTManager, users UserReader) *AuthMiddleware {
+	return &AuthMiddleware{
+		jwtManager: jwtManager,
+		users:      users,
+	}
 }
 
 func (m *AuthMiddleware) Handle(next http.Handler) http.Handler {
@@ -42,10 +50,16 @@ func (m *AuthMiddleware) Handle(next http.Handler) http.Handler {
 			return
 		}
 
+		storedUser, err := m.users.GetByID(r.Context(), claims.UserID)
+		if err != nil || storedUser == nil {
+			writeJSONError(w, http.StatusUnauthorized, "user no longer exists")
+			return
+		}
+
 		user := &model.AuthUser{
-			ID:    claims.UserID,
-			Email: claims.Email,
-			Role:  claims.Role,
+			ID:    storedUser.ID,
+			Email: storedUser.Email,
+			Role:  storedUser.Role,
 		}
 
 		ctx := context.WithValue(r.Context(), userContextKey, user)

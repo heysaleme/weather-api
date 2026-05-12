@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"weather-api/internal/errs"
 	"weather-api/internal/model"
 )
 
@@ -35,13 +36,17 @@ func (r *InMemoryUserRepository) Create(_ context.Context, user *model.User) err
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	emailKey := normalizeEmail(user.Email)
+	if _, exists := r.byEmail[emailKey]; exists {
+		return errs.Conflict("email already exists")
+	}
+
 	id := r.nextID
 	r.nextID++
 
 	userCopy := *user
 	userCopy.ID = id
 
-	emailKey := normalizeEmail(user.Email)
 	r.byID[id] = &userCopy
 	r.byEmail[emailKey] = id
 	user.ID = id
