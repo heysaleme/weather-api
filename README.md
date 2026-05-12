@@ -60,6 +60,16 @@ go run cmd/main.go
 - admin роль не выдаётся через обычную регистрацию
 - пароли не возвращаются в API и не хранятся в plain text
 
+## Tests
+
+В проекте уже есть unit tests для части критичных сценариев auth и middleware.
+
+Запуск:
+
+```bash
+go test ./...
+```
+
 ## Auth endpoints
 
 ### `POST /auth/register`
@@ -139,7 +149,68 @@ Authorization: Bearer <token>
 - `GET /users/{id}`
 - `DELETE /users/{id}`
 
-Admin создаётся через bootstrap env, а не через публичную регистрацию.
+Admin создаётся только при старте приложения через `BOOTSTRAP_ADMIN_EMAIL` и `BOOTSTRAP_ADMIN_PASSWORD`, а не через публичную регистрацию.
+
+## Expected status codes
+
+- `401 Unauthorized` — нет токена, токен невалидный, истёк или пользователь больше не существует
+- `403 Forbidden` — токен валидный, но роли недостаточно для admin endpoint
+- `409 Conflict` — попытка зарегистрировать уже существующий email или добавить уже сохранённый город
+
+## How to test
+
+1. Зарегистрировать обычного пользователя:
+
+```bash
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"strongpass123"}'
+```
+
+2. Залогиниться и получить `access_token`:
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"strongpass123"}'
+```
+
+3. Добавить город:
+
+```bash
+curl -X POST http://localhost:8080/cities \
+  -H "Authorization: Bearer USER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"city":"Almaty"}'
+```
+
+4. Получить города пользователя:
+
+```bash
+curl http://localhost:8080/cities \
+  -H "Authorization: Bearer USER_TOKEN"
+```
+
+5. Получить текущую погоду и историю:
+
+```bash
+curl http://localhost:8080/weather \
+  -H "Authorization: Bearer USER_TOKEN"
+
+curl http://localhost:8080/weather/history \
+  -H "Authorization: Bearer USER_TOKEN"
+```
+
+6. Проверить admin login и admin route:
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"very-strong-admin-password"}'
+
+curl http://localhost:8080/users \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
 
 ## Legacy public weather endpoints
 
