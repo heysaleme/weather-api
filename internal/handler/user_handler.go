@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"weather-api/internal/dto"
 	"weather-api/internal/model"
 
 	"github.com/go-chi/chi/v5"
@@ -32,7 +33,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, users)
+	writeJSON(w, http.StatusOK, dto.ToUserResponses(users))
 }
 
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +49,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, user)
+	writeJSON(w, http.StatusOK, dto.ToUserResponse(user))
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -79,5 +80,5 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, dto.ToUserResponse(result))
 }

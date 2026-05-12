@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -15,15 +16,18 @@ type ErrorResponse struct {
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	encoder := json.NewEncoder(w)
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
 	encoder.SetIndent("", "  ")
 
 	if err := encoder.Encode(data); err != nil {
 		http.Error(w, `{"error":"failed to encode json"}`, http.StatusInternalServerError)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(buf.Bytes())
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {

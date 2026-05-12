@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 
+	"weather-api/internal/dto"
 	"weather-api/internal/model"
 )
 
 type AuthService interface {
-	Register(ctx context.Context, req model.RegisterRequest) (*model.User, error)
-	Login(ctx context.Context, req model.LoginRequest) (*model.AuthResponse, error)
+	Register(ctx context.Context, email, password string) (*model.User, error)
+	Login(ctx context.Context, email, password string) (string, error)
 }
 
 type AuthHandler struct {
@@ -21,33 +22,33 @@ func NewAuthHandler(service AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req model.RegisterRequest
+	var req dto.RegisterRequest
 	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	user, err := h.service.Register(r.Context(), req)
+	user, err := h.service.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
 		writeError(w, statusCode(err), err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, user)
+	writeJSON(w, http.StatusCreated, dto.ToUserResponse(user))
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req model.LoginRequest
+	var req dto.LoginRequest
 	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	resp, err := h.service.Login(r.Context(), req)
+	token, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		writeError(w, statusCode(err), err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusOK, dto.ToAuthResponse(token))
 }

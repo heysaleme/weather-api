@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"weather-api/internal/dto"
 	"weather-api/internal/model"
 )
 
@@ -33,7 +34,7 @@ func (h *UserWeatherHandler) GetCurrent(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, dto.ToWeatherResponses(result))
 }
 
 func (h *UserWeatherHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
@@ -49,5 +50,5 @@ func (h *UserWeatherHandler) GetHistory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, dto.ToWeatherHistoryResponses(result))
 }

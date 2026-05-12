@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"weather-api/internal/dto"
 	"weather-api/internal/model"
 
 	"github.com/go-chi/chi/v5"
@@ -32,7 +33,7 @@ func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, dto.ToWeatherResponse(result))
 }
 
 func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +45,7 @@ func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, dto.ToWeatherResponses(result))
 }
 
 func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Request) {
@@ -56,5 +57,5 @@ func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	writeJSON(w, http.StatusOK, dto.ToWeatherResponses(result))
 }

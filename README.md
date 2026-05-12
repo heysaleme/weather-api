@@ -10,6 +10,9 @@ REST API на Go для работы с погодой и пользовател
 - защищённые маршруты
 - хранение пользовательских городов
 - историю погодных запросов
+- разделение `model` и `dto`
+- конфигурацию через `config`
+- подготовленную структуру для unit tests service layer
 
 Архитектура:
 
@@ -17,16 +20,25 @@ REST API на Go для работы с погодой и пользовател
 Request -> AuthMiddleware -> Handler -> Service -> Repository
 ```
 
+Принципы текущей структуры:
+- `handler` работает только с HTTP и DTO
+- `service` содержит бизнес-логику и зависит от interfaces
+- `repository` отвечает только за доступ к данным
+- `model` содержит доменные сущности
+- `dto` содержит request/response контракты API
+- `config` отвечает за загрузку env-конфигурации
+
 ## Run locally
 
 Перед запуском задайте обязательные переменные окружения:
 
 ```bash
 export JWT_SECRET="super-secret-key"
-export ADMIN_EMAILS="admin@example.com"
+export BOOTSTRAP_ADMIN_EMAIL="admin@example.com"
+export BOOTSTRAP_ADMIN_PASSWORD="very-strong-admin-password"
 ```
 
-`ADMIN_EMAILS` необязательна. Если email пользователя есть в этом списке, при регистрации он получает роль `admin`.
+`BOOTSTRAP_ADMIN_*` необязательны. Если они заданы, при старте приложения создаётся начальный admin-аккаунт.
 
 Запуск:
 
@@ -44,6 +56,8 @@ go run cmd/main.go
 - токен подписывается `HS256`
 - в JWT есть `user_id`, `email`, `role`, `exp`
 - middleware валидирует подпись и `exp`
+- middleware перепроверяет пользователя в repository на каждом защищённом запросе
+- admin роль не выдаётся через обычную регистрацию
 - пароли не возвращаются в API и не хранятся в plain text
 
 ## Auth endpoints
@@ -125,6 +139,8 @@ Authorization: Bearer <token>
 - `GET /users/{id}`
 - `DELETE /users/{id}`
 
+Admin создаётся через bootstrap env, а не через публичную регистрацию.
+
 ## Legacy public weather endpoints
 
 Сохранены существующие публичные маршруты:
@@ -141,6 +157,8 @@ weather-api/
 └── internal/
     ├── auth/
     ├── client/
+    ├── config/
+    ├── dto/
     ├── errs/
     ├── handler/
     ├── middleware/

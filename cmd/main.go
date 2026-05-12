@@ -1,16 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"weather-api/internal/auth"
 	"weather-api/internal/client"
+	"weather-api/internal/config"
 	"weather-api/internal/handler"
 	"weather-api/internal/middleware"
 	"weather-api/internal/repository"
@@ -18,8 +18,12 @@ import (
 )
 
 func main() {
-	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
-	jwtManager, err := auth.NewJWTManager(jwtSecret, 24*time.Hour)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	jwtManager, err := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpiration)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,18 +42,30 @@ func main() {
 	cityRepo := repository.NewInMemoryCityRepository()
 	historyRepo := repository.NewInMemoryWeatherHistoryRepository()
 
-	weatherService := service.NewWeatherService(weatherClient, geoClient, countryClient)
-	authService := service.NewAuthService(userRepo, jwtManager, parseCSVEnv("ADMIN_EMAILS"))
+	weatherService := service.NewWeatherService(
+		client.WeatherProviderAdapter{Client: weatherClient},
+		client.GeoProviderAdapter{Client: geoClient},
+		client.CountryProviderAdapter{Client: countryClient},
+	)
+	authService := service.NewAuthService(userRepo, jwtManager)
 	userService := service.NewUserService(userRepo, cityRepo, historyRepo)
 	cityService := service.NewCityService(cityRepo)
 	userWeatherService := service.NewUserWeatherService(cityRepo, historyRepo, weatherService)
+
+	if err := authService.EnsureAdminAccount(
+		context.Background(),
+		cfg.BootstrapAdminEmail,
+		cfg.BootstrapAdminPass,
+	); err != nil {
+		log.Fatal(err)
+	}
 
 	weatherHandler := handler.NewWeatherHandler(weatherService)
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
 	cityHandler := handler.NewCityHandler(cityService)
 	userWeatherHandler := handler.NewUserWeatherHandler(userWeatherService)
-	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
+	authMiddleware := middleware.NewAuthMiddleware(jwtManager, userService)
 
 	router.Route("/weather", func(r chi.Router) {
 		r.With(authMiddleware.Handle).Get("/", userWeatherHandler.GetCurrent)
@@ -85,27 +101,10 @@ func main() {
 		})
 	})
 
-	addr := ":8080"
+	addr := ":" + cfg.HTTPPort
 	log.Printf("server started on %s", addr)
 
 	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func parseCSVEnv(name string) []string {
-	raw := strings.TrimSpace(os.Getenv(name))
-	if raw == "" {
-		return nil
-	}
-
-	parts := strings.Split(raw, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if value := strings.TrimSpace(part); value != "" {
-			result = append(result, value)
-		}
-	}
-
-	return result
 }

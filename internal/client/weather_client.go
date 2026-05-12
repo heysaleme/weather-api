@@ -31,7 +31,14 @@ type weatherResponse struct {
 	} `json:"current_weather"`
 }
 
-func (c *WeatherClient) GetCurrentWeather(ctx context.Context, lat, lon float64) (*weatherResponse, error) {
+type CurrentWeather struct {
+	Temperature float64
+	WindSpeed   float64
+	WeatherCode int
+	Time        string
+}
+
+func (c *WeatherClient) GetCurrentWeather(ctx context.Context, lat, lon float64) (*CurrentWeather, error) {
 	u, err := url.Parse(c.baseURL)
 	if err != nil {
 		return nil, err
@@ -63,5 +70,10 @@ func (c *WeatherClient) GetCurrentWeather(ctx context.Context, lat, lon float64)
 		return nil, errs.Upstream("decode weather response: %v", err)
 	}
 
-	return &result, nil
+	return &CurrentWeather{
+		Temperature: result.CurrentWeather.Temperature,
+		WindSpeed:   result.CurrentWeather.Windspeed,
+		WeatherCode: result.CurrentWeather.Weathercode,
+		Time:        result.CurrentWeather.Time,
+	}, nil
 }

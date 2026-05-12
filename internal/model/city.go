@@ -9,10 +9,6 @@ type City struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type CreateCityRequest struct {
-	City string `json:"city"`
-}
-
 type WeatherHistoryRecord struct {
 	ID          int64         `json:"id"`
 	UserID      int64         `json:"user_id,omitempty"`
