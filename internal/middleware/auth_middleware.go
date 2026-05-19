@@ -86,6 +86,10 @@ func UserFromContext(ctx context.Context) (*model.AuthUser, bool) {
 	return user, ok
 }
 
+func WithUser(ctx context.Context, user *model.AuthUser) context.Context {
+	return context.WithValue(ctx, userContextKey, user)
+}
+
 func writeJSONError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
