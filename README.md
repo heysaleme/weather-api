@@ -1,82 +1,109 @@
 # Weather API
 
-## Overview
+REST API на Go для работы с погодой, пользовательскими городами и историей запросов.
 
-REST API на Go для работы с погодой и пользовательскими данными.
+## Что реализовано
 
-Теперь сервис поддерживает:
-- JWT аутентификацию
-- роли `user` и `admin`
-- защищённые маршруты
-- хранение пользовательских городов
-- историю погодных запросов
-- разделение `model` и `dto`
-- конфигурацию через `config`
-- подготовленную структуру для unit tests service layer
+- clean architecture с разделением на `handler`, `service`, `repository`
+- dependency injection через конструкторы
+- JWT authentication и роли `user` / `admin`
+- middleware для auth, RBAC, request logging и recovery
+- structured logging на `Uber Zap`
+- unit tests для service и handler слоёв
+- mock зависимости через `testify/mock`
+- integration test для repository на SQLite in-memory
+- негативные сценарии: `bad request`, `invalid JSON`, `not found`, `internal error`
 
-Архитектура:
+## Архитектура
 
 ```text
-Request -> AuthMiddleware -> Handler -> Service -> Repository
+Request
+  -> LoggingMiddleware
+  -> RecoveryMiddleware
+  -> AuthMiddleware / RequireRole
+  -> Handler
+  -> Service
+  -> Repository / External Client
 ```
 
-Принципы текущей структуры:
-- `handler` работает только с HTTP и DTO
-- `service` содержит бизнес-логику и зависит от interfaces
-- `repository` отвечает только за доступ к данным
-- `model` содержит доменные сущности
-- `dto` содержит request/response контракты API
-- `config` отвечает за загрузку env-конфигурации
+Принципы:
 
-## Run locally
+- `handler` отвечает только за HTTP, DTO и status codes
+- `service` содержит бизнес-логику
+- `repository` отвечает за хранение данных
+- зависимости передаются через интерфейсы и конструкторы
+- внутренние ошибки не утекaют клиенту
+- каждый запрос получает `request_id`, который попадает в response header и structured logs
 
-Перед запуском задайте обязательные переменные окружения:
+## Structured logging
+
+Все новые логи пишутся через `zap`.
+
+Logging middleware логирует:
+
+- `request_id`
+- `method`
+- `path`
+- `status_code`
+- `duration`
+
+Recovery middleware:
+
+- перехватывает panic
+- пишет structured error log
+- возвращает клиенту `500 internal server error`
+
+Для внутренних ошибок API:
+
+- клиент получает безопасное сообщение `internal server error`
+- подробная ошибка остаётся только в логах
+
+## Безопасность
+
+- пароли хэшируются через `bcrypt`
+- JWT secret хранится в environment variables
+- токен подписывается `HS256`
+- middleware валидирует подпись и срок жизни токена
+- на защищённых маршрутах пользователь перепроверяется в repository
+- `admin` не создаётся через публичную регистрацию
+- `PasswordHash` не возвращается клиенту
+- внутренние ошибки и panic не раскрываются наружу
+
+## Конфигурация
+
+Обязательная переменная:
 
 ```bash
 export JWT_SECRET="super-secret-key"
+```
+
+Необязательные:
+
+```bash
+export HTTP_PORT="8080"
 export BOOTSTRAP_ADMIN_EMAIL="admin@example.com"
 export BOOTSTRAP_ADMIN_PASSWORD="very-strong-admin-password"
 ```
 
-`BOOTSTRAP_ADMIN_*` необязательны. Если они заданы, при старте приложения создаётся начальный admin-аккаунт.
+Если `BOOTSTRAP_ADMIN_*` заданы, при старте создаётся bootstrap admin.
 
-Запуск:
+## Запуск
 
 ```bash
 go mod tidy
-go run cmd/main.go
+go run ./cmd
 ```
 
 Сервер стартует на `http://localhost:8080`.
 
-## Security
+## Основные endpoints
 
-- пароли хэшируются через `bcrypt`
-- JWT secret хранится в env
-- токен подписывается `HS256`
-- в JWT есть `user_id`, `email`, `role`, `exp`
-- middleware валидирует подпись и `exp`
-- middleware перепроверяет пользователя в repository на каждом защищённом запросе
-- admin роль не выдаётся через обычную регистрацию
-- пароли не возвращаются в API и не хранятся в plain text
+### Auth
 
-## Tests
+- `POST /auth/register`
+- `POST /auth/login`
 
-В проекте уже есть unit tests для части критичных сценариев auth и middleware.
-
-Запуск:
-
-```bash
-go test ./...
-```
-
-## Auth endpoints
-
-### `POST /auth/register`
-
-Регистрация пользователя.
-
-Request:
+Пример регистрации:
 
 ```json
 {
@@ -85,11 +112,7 @@ Request:
 }
 ```
 
-### `POST /auth/login`
-
-Возвращает JWT access token.
-
-Request:
+Пример логина:
 
 ```json
 {
@@ -106,60 +129,44 @@ Response:
 }
 ```
 
-## Protected endpoints
+### Protected routes
 
-Для всех защищённых маршрутов нужен заголовок:
+Заголовок:
 
 ```bash
 Authorization: Bearer <token>
 ```
 
-### Cities
+Пользовательские города:
 
 - `POST /cities`
 - `GET /cities`
 - `DELETE /cities/{city_id}`
 
-Пример добавления города:
-
-```json
-{
-  "city": "Almaty"
-}
-```
-
-### Weather
+Погода пользователя:
 
 - `GET /weather`
 - `GET /weather/history`
 
-`GET /weather` получает текущую погоду по всем городам текущего пользователя и сохраняет результат в историю.
-
-### Current user
+Текущий пользователь:
 
 - `GET /users/me`
 
-Возвращает данные текущего пользователя из JWT.
-
-## Admin endpoints
-
-Только для роли `admin`:
+### Admin routes
 
 - `GET /users`
 - `GET /users/{id}`
 - `DELETE /users/{id}`
 
-Admin создаётся только при старте приложения через `BOOTSTRAP_ADMIN_EMAIL` и `BOOTSTRAP_ADMIN_PASSWORD`, а не через публичную регистрацию.
+### Public weather routes
 
-## Expected status codes
+- `GET /weather/{city}`
+- `GET /weather/country/{country}`
+- `GET /weather/country/{country}/top`
 
-- `401 Unauthorized` — нет токена, токен невалидный, истёк или пользователь больше не существует
-- `403 Forbidden` — токен валидный, но роли недостаточно для admin endpoint
-- `409 Conflict` — попытка зарегистрировать уже существующий email или добавить уже сохранённый город
+## Примеры curl
 
-## How to test
-
-1. Зарегистрировать обычного пользователя:
+Регистрация:
 
 ```bash
 curl -X POST http://localhost:8080/auth/register \
@@ -167,7 +174,7 @@ curl -X POST http://localhost:8080/auth/register \
   -d '{"email":"user@example.com","password":"strongpass123"}'
 ```
 
-2. Залогиниться и получить `access_token`:
+Логин:
 
 ```bash
 curl -X POST http://localhost:8080/auth/login \
@@ -175,7 +182,7 @@ curl -X POST http://localhost:8080/auth/login \
   -d '{"email":"user@example.com","password":"strongpass123"}'
 ```
 
-3. Добавить город:
+Добавление города:
 
 ```bash
 curl -X POST http://localhost:8080/cities \
@@ -184,14 +191,14 @@ curl -X POST http://localhost:8080/cities \
   -d '{"city":"Almaty"}'
 ```
 
-4. Получить города пользователя:
+Получение списка городов:
 
 ```bash
 curl http://localhost:8080/cities \
   -H "Authorization: Bearer USER_TOKEN"
 ```
 
-5. Получить текущую погоду и историю:
+Погода и история:
 
 ```bash
 curl http://localhost:8080/weather \
@@ -201,30 +208,55 @@ curl http://localhost:8080/weather/history \
   -H "Authorization: Bearer USER_TOKEN"
 ```
 
-6. Проверить admin login и admin route:
+## Тесты
+
+В проекте есть:
+
+- unit tests для `service`
+- unit tests для `handler`
+- unit tests для middleware
+- integration test для SQLite repository
+
+Основные команды:
 
 ```bash
-curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"very-strong-admin-password"}'
-
-curl http://localhost:8080/users \
-  -H "Authorization: Bearer ADMIN_TOKEN"
+GOCACHE=$(pwd)/.gocache go test ./...
+GOCACHE=$(pwd)/.gocache go test -v ./...
+GOCACHE=$(pwd)/.gocache go test -cover ./...
 ```
 
-## Legacy public weather endpoints
+Если локальная среда не требует кастомный `GOCACHE`, можно запускать обычные команды:
 
-Сохранены существующие публичные маршруты:
+```bash
+go test ./...
+go test -v ./...
+go test -cover ./...
+```
 
-- `GET /weather/{city}`
-- `GET /weather/country/{country}`
-- `GET /weather/country/{country}/top`
+## Покрытие и проверяемые сценарии
 
-## Project structure
+Покрываются:
+
+- happy path
+- пустые данные
+- invalid ID
+- invalid JSON
+- `not found`
+- ошибки repository
+- internal error
+- panic recovery
+
+Service layer покрыт выше требуемых `60%`.
+
+## Структура проекта
 
 ```text
 weather-api/
-├── cmd/main.go
+├── cmd/
+│   ├── main.go
+│   └── main_test.go
+├── go.mod
+├── go.sum
 └── internal/
     ├── auth/
     ├── client/
