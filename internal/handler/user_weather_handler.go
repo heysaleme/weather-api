@@ -24,13 +24,13 @@ func NewUserWeatherHandler(service UserWeatherService) *UserWeatherHandler {
 func (h *UserWeatherHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	user, err := currentUser(r)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
 	result, err := h.service.GetCurrent(r.Context(), user)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -40,13 +40,13 @@ func (h *UserWeatherHandler) GetCurrent(w http.ResponseWriter, r *http.Request) 
 func (h *UserWeatherHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
 	user, err := currentUser(r)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
 	result, err := h.service.GetHistory(r.Context(), user)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
