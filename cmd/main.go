@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
 	"weather-api/internal/auth"
 	"weather-api/internal/client"
@@ -18,17 +18,27 @@ import (
 )
 
 func main() {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		_ = logger.Sync()
+	}()
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
 	jwtManager, err := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpiration)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to create jwt manager", zap.Error(err))
 	}
 
 	router := chi.NewRouter()
+	router.Use(middleware.NewLoggingMiddleware(logger).Handle)
+	router.Use(middleware.NewRecoveryMiddleware(logger).Handle)
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -57,7 +67,7 @@ func main() {
 		cfg.BootstrapAdminEmail,
 		cfg.BootstrapAdminPass,
 	); err != nil {
-		log.Fatal(err)
+		logger.Fatal("failed to ensure admin account", zap.Error(err))
 	}
 
 	weatherHandler := handler.NewWeatherHandler(weatherService)
@@ -102,9 +112,9 @@ func main() {
 	})
 
 	addr := ":" + cfg.HTTPPort
-	log.Printf("server started on %s", addr)
+	logger.Info("server_started", zap.String("addr", addr))
 
 	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatal(err)
+		logger.Fatal("server_stopped", zap.Error(err))
 	}
 }
