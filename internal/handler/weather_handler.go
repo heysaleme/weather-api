@@ -29,7 +29,7 @@ func (h *WeatherHandler) GetWeatherByCity(w http.ResponseWriter, r *http.Request
 
 	result, err := h.service.GetWeatherByCity(r.Context(), city)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -41,7 +41,7 @@ func (h *WeatherHandler) GetWeatherByCountry(w http.ResponseWriter, r *http.Requ
 
 	result, err := h.service.GetWeatherByCountry(r.Context(), country)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *WeatherHandler) GetTopCitiesByCountry(w http.ResponseWriter, r *http.Re
 
 	result, err := h.service.GetTopCitiesByCountry(r.Context(), country)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
