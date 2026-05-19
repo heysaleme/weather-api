@@ -9,6 +9,8 @@ import (
 	"weather-api/internal/errs"
 	"weather-api/internal/middleware"
 	"weather-api/internal/model"
+
+	"go.uber.org/zap"
 )
 
 type ErrorResponse struct {
@@ -32,6 +34,17 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, ErrorResponse{Error: message})
+}
+
+func respondWithError(w http.ResponseWriter, r *http.Request, err error) {
+	status := statusCode(err)
+	if status >= http.StatusInternalServerError {
+		logInternalError(r, err, status)
+		writeError(w, status, "internal server error")
+		return
+	}
+
+	writeError(w, status, err.Error())
 }
 
 func readJSON(r *http.Request, target any) error {
@@ -65,4 +78,21 @@ func currentUser(r *http.Request) (*model.AuthUser, error) {
 		return nil, errs.Unauthorized("unauthorized")
 	}
 	return user, nil
+}
+
+func logInternalError(r *http.Request, err error, status int) {
+	logger, ok := middleware.LoggerFromContext(r.Context())
+	if !ok {
+		logger = zap.NewNop()
+	}
+
+	fields := []zap.Field{
+		zap.Error(err),
+		zap.Int("status_code", status),
+	}
+	if requestID, ok := middleware.RequestIDFromContext(r.Context()); ok {
+		fields = append(fields, zap.String("request_id", requestID))
+	}
+
+	logger.Error("request failed", fields...)
 }
