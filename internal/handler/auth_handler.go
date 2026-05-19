@@ -30,7 +30,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.service.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
