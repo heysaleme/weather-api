@@ -29,7 +29,7 @@ func NewUserHandler(service UserService) *UserHandler {
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	users, err := h.service.List(r.Context())
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -45,7 +45,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.GetByID(r.Context(), id)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Delete(r.Context(), id); err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -70,13 +70,13 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, err := currentUser(r)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
 	result, err := h.service.GetCurrent(r.Context(), user)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
