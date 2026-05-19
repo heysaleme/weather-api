@@ -28,7 +28,7 @@ func NewCityHandler(service CityService) *CityHandler {
 func (h *CityHandler) Create(w http.ResponseWriter, r *http.Request) {
 	user, err := currentUser(r)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -40,7 +40,7 @@ func (h *CityHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	city, err := h.service.Create(r.Context(), user, req.City)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -50,13 +50,13 @@ func (h *CityHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *CityHandler) List(w http.ResponseWriter, r *http.Request) {
 	user, err := currentUser(r)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
 	cities, err := h.service.List(r.Context(), user)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -66,7 +66,7 @@ func (h *CityHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *CityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	user, err := currentUser(r)
 	if err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (h *CityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Delete(r.Context(), user, cityID); err != nil {
-		writeError(w, statusCode(err), err.Error())
+		respondWithError(w, r, err)
 		return
 	}
 
